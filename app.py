@@ -105,9 +105,15 @@ def parse_marcador(s):
 
 
 # ---------------- auth ----------------
+def liga_actual():
+    """Liga (grupo) tomada del link: ?liga=amigos. Por defecto 'general'."""
+    return (st.query_params.get("liga") or "general").strip().lower()
+
+
 def iniciar_sesion(u):
     """Guarda sesión en memoria y en la URL (token) para sobrevivir al refresh."""
     st.session_state.user = u
+    st.query_params["liga"] = u.get("liga", "general")
     if u.get("token"):
         st.query_params["t"] = u["token"]
     st.rerun()
@@ -115,7 +121,7 @@ def iniciar_sesion(u):
 
 def cerrar_sesion():
     st.session_state.pop("user", None)
-    st.query_params.clear()
+    st.query_params.pop("t", None)   # mantiene ?liga para volver al login del mismo grupo
     st.rerun()
 
 
@@ -131,16 +137,17 @@ def restaurar_sesion():
 
 
 def pantalla_login():
+    liga = liga_actual()
     st.title("🏆 Candy Mundial")
-    st.caption("Prode del Mundial 2026")
+    st.caption(f"Prode del Mundial 2026 · Liga: **{liga}**")
 
-    if not db.hay_admin():
-        st.info("No hay administrador todavía. Creá el primer usuario (será admin).")
+    if not db.hay_admin(liga):
+        st.info(f"Liga «{liga}» nueva. Creá el primer usuario (será el admin de esta liga).")
         with st.form("setup_admin"):
             nombre = st.text_input("Nombre de admin")
             pin = st.text_input("PIN", type="password")
             if st.form_submit_button("Crear admin") and nombre and pin:
-                db.crear_usuario(nombre, pin, es_admin=True)
+                db.crear_usuario(nombre, pin, liga=liga, es_admin=True)
                 st.success("Admin creado. Iniciá sesión.")
                 st.rerun()
         return
@@ -151,7 +158,7 @@ def pantalla_login():
             nombre = st.text_input("Nombre")
             pin = st.text_input("PIN", type="password")
             if st.form_submit_button("Ingresar"):
-                u = db.login(nombre, pin)
+                u = db.login(nombre, pin, liga=liga)
                 if u:
                     iniciar_sesion(u)
                 else:
@@ -162,10 +169,10 @@ def pantalla_login():
             pin = st.text_input("Elegí un PIN", type="password", key="r_pin")
             if st.form_submit_button("Crear cuenta") and nombre and pin:
                 try:
-                    db.crear_usuario(nombre, pin)
+                    db.crear_usuario(nombre, pin, liga=liga)
                     st.success("Cuenta creada. Ya podés ingresar.")
-                except Exception:
-                    st.error("Ese nombre ya existe.")
+                except Exception as e:
+                    st.error(str(e) if isinstance(e, ValueError) else "Ese nombre ya existe en esta liga.")
 
 
 # ---------------- vistas ----------------
@@ -376,9 +383,9 @@ def vista_pronosticos(user):
         st.rerun()
 
 
-def vista_tabla():
+def vista_tabla(user):
     st.subheader("🏅 Tabla de posiciones")
-    tabla = db.tabla_posiciones()
+    tabla = db.tabla_posiciones(user["liga"])
     if not tabla:
         st.info("Sin datos todavía.")
         return
@@ -515,6 +522,7 @@ else:
     user = st.session_state.user
     with st.sidebar:
         st.markdown(f"👤 **{user['nombre']}**")
+        st.caption(f"🏆 Liga: **{user['liga']}**")
         if user["es_admin"]:
             st.caption("Administrador")
         if st.button("Cerrar sesión"):
@@ -530,7 +538,7 @@ else:
     with seleccion[0]:
         vista_pronosticos(user)
     with seleccion[1]:
-        vista_tabla()
+        vista_tabla(user)
     with seleccion[2]:
         vista_partidos()
     if user["es_admin"]:

@@ -28,10 +28,13 @@ def init_db():
             """
             CREATE TABLE IF NOT EXISTS usuarios (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                nombre TEXT UNIQUE NOT NULL,
+                nombre TEXT NOT NULL,
+                liga TEXT NOT NULL DEFAULT 'general',
                 pin_hash TEXT NOT NULL,
                 es_admin INTEGER NOT NULL DEFAULT 0,
-                creado TEXT NOT NULL
+                creado TEXT NOT NULL,
+                token TEXT,
+                UNIQUE(nombre, liga)
             );
 
             CREATE TABLE IF NOT EXISTS partidos (
@@ -66,10 +69,31 @@ def init_db():
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_partidos_api "
             "ON partidos(api_id) WHERE api_id IS NOT NULL"
         )
-        # Token de sesión persistente (para que el login sobreviva al refresh)
+        # Migraciones de usuarios: token (sesión persistente) y liga (multi-grupo)
         ucols = [r["name"] for r in c.execute("PRAGMA table_info(usuarios)")]
         if "token" not in ucols:
             c.execute("ALTER TABLE usuarios ADD COLUMN token TEXT")
+            ucols.append("token")
+        if "liga" not in ucols:
+            # Recrea la tabla: quita UNIQUE(nombre) global y pone UNIQUE(nombre, liga)
+            c.executescript(
+                """
+                CREATE TABLE usuarios_mig (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    nombre TEXT NOT NULL,
+                    liga TEXT NOT NULL DEFAULT 'general',
+                    pin_hash TEXT NOT NULL,
+                    es_admin INTEGER NOT NULL DEFAULT 0,
+                    creado TEXT NOT NULL,
+                    token TEXT,
+                    UNIQUE(nombre, liga)
+                );
+                INSERT INTO usuarios_mig (id, nombre, liga, pin_hash, es_admin, creado, token)
+                    SELECT id, nombre, 'general', pin_hash, es_admin, creado, token FROM usuarios;
+                DROP TABLE usuarios;
+                ALTER TABLE usuarios_mig RENAME TO usuarios;
+                """
+            )
 
 
 def _norm_pin(pin: str) -> str:
@@ -86,25 +110,26 @@ def _nuevo_token() -> str:
 
 
 # ---------- usuarios ----------
-def crear_usuario(nombre: str, pin: str, es_admin: bool = False):
+def crear_usuario(nombre: str, pin: str, liga: str = "general", es_admin: bool = False):
     nombre = nombre.strip()
     with conn() as c:
         existe = c.execute(
-            "SELECT 1 FROM usuarios WHERE nombre = ? COLLATE NOCASE", (nombre,)
+            "SELECT 1 FROM usuarios WHERE nombre = ? COLLATE NOCASE AND liga = ?",
+            (nombre, liga),
         ).fetchone()
         if existe:
-            raise ValueError("Ese nombre ya existe.")
+            raise ValueError("Ese nombre ya existe en esta liga.")
         c.execute(
-            "INSERT INTO usuarios(nombre, pin_hash, es_admin, creado, token) VALUES (?,?,?,?,?)",
-            (nombre, _hash(pin), int(es_admin), datetime.now().isoformat(), _nuevo_token()),
+            "INSERT INTO usuarios(nombre, liga, pin_hash, es_admin, creado, token) VALUES (?,?,?,?,?,?)",
+            (nombre, liga, _hash(pin), int(es_admin), datetime.now().isoformat(), _nuevo_token()),
         )
 
 
-def login(nombre: str, pin: str):
+def login(nombre: str, pin: str, liga: str = "general"):
     with conn() as c:
         row = c.execute(
-            "SELECT * FROM usuarios WHERE nombre = ? COLLATE NOCASE AND pin_hash = ?",
-            (nombre.strip(), _hash(pin)),
+            "SELECT * FROM usuarios WHERE nombre = ? COLLATE NOCASE AND liga = ? AND pin_hash = ?",
+            (nombre.strip(), liga, _hash(pin)),
         ).fetchone()
         if not row:
             return None
@@ -123,14 +148,20 @@ def usuario_por_token(token: str):
     return dict(row) if row else None
 
 
-def hay_admin() -> bool:
+def hay_admin(liga: str = "general") -> bool:
     with conn() as c:
-        return c.execute("SELECT 1 FROM usuarios WHERE es_admin=1 LIMIT 1").fetchone() is not None
+        return c.execute(
+            "SELECT 1 FROM usuarios WHERE es_admin=1 AND liga=? LIMIT 1", (liga,)
+        ).fetchone() is not None
 
 
-def listar_usuarios():
+def listar_usuarios(liga: str = None):
     with conn() as c:
-        return [dict(r) for r in c.execute("SELECT id, nombre, es_admin FROM usuarios ORDER BY nombre")]
+        if liga is None:
+            return [dict(r) for r in c.execute(
+                "SELECT id, nombre, liga, es_admin FROM usuarios ORDER BY liga, nombre")]
+        return [dict(r) for r in c.execute(
+            "SELECT id, nombre, liga, es_admin FROM usuarios WHERE liga=? ORDER BY nombre", (liga,))]
 
 
 # ---------- partidos ----------
@@ -221,12 +252,12 @@ def exportar_pronosticos():
     """Todos los pronósticos con nombre de jugador y datos del partido (para CSV)."""
     with conn() as c:
         rows = c.execute(
-            """SELECT u.nombre AS jugador, p.fase, p.local, p.visitante, p.inicio,
+            """SELECT u.liga, u.nombre AS jugador, p.fase, p.local, p.visitante, p.inicio,
                       pr.goles_local, pr.goles_visitante, pr.actualizado
                FROM pronosticos pr
                JOIN usuarios u ON u.id = pr.usuario_id
                JOIN partidos p ON p.id = pr.partido_id
-               ORDER BY u.nombre, p.inicio"""
+               ORDER BY u.liga, u.nombre, p.inicio"""
         ).fetchall()
     return [dict(r) for r in rows]
 
@@ -332,21 +363,23 @@ def puntos_pronostico(pgl, pgv, rgl, rgv):
     return 0
 
 
-def tabla_posiciones():
+def tabla_posiciones(liga: str = "general"):
     partidos = {p["id"]: p for p in listar_partidos()}
     with conn() as c:
-        usuarios = c.execute("SELECT id, nombre FROM usuarios").fetchall()
+        usuarios = c.execute("SELECT id, nombre FROM usuarios WHERE liga=?", (liga,)).fetchall()
         pron = c.execute("SELECT * FROM pronosticos").fetchall()
 
     acc = {u["id"]: {"nombre": u["nombre"], "pts": 0, "exactos": 0, "jugados": 0} for u in usuarios}
     for p in pron:
+        a = acc.get(p["usuario_id"])     # solo cuenta usuarios de esta liga
+        if not a:
+            continue
         par = partidos.get(p["partido_id"])
         if not par:
             continue
         pts = puntos_pronostico(p["goles_local"], p["goles_visitante"], par["goles_local"], par["goles_visitante"])
         if pts is None:
             continue
-        a = acc[p["usuario_id"]]
         a["pts"] += pts
         a["jugados"] += 1
         if pts == PTS_EXACTO:
