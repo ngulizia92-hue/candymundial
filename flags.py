@@ -14,6 +14,10 @@ COD = {
     "Argentina": "ar", "Argelia": "dz", "Austria": "at", "Jordania": "jo",
     "Portugal": "pt", "RD Congo": "cd", "Uzbekistán": "uz", "Colombia": "co",
     "Inglaterra": "gb-eng", "Croacia": "hr", "Ghana": "gh", "Panamá": "pa",
+    # alias / variantes de nombre (datos viejos u otras fuentes)
+    "República Checa": "cz", "Chequia ": "cz", "Catar": "qa", "Qatar ": "qa",
+    "Bosnia-Herzegovina": "ba", "R.D. del Congo": "cd", "Congo DR": "cd",
+    "EE.UU.": "us", "Estados Unidos de América": "us", "Turquia": "tr",
 }
 
 
@@ -22,7 +26,8 @@ CORTO = {
     "Bosnia y Herzegovina": "Bosnia", "Países Bajos": "P. Bajos",
     "Arabia Saudita": "Arabia S.", "Estados Unidos": "EE.UU.",
     "Corea del Sur": "Corea", "Costa de Marfil": "C. Marfil",
-    "Nueva Zelanda": "N. Zelanda",
+    "Nueva Zelanda": "N. Zelanda", "República Checa": "Chequia",
+    "Bosnia-Herzegovina": "Bosnia", "R.D. del Congo": "RD Congo",
 }
 
 

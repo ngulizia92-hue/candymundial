@@ -224,6 +224,14 @@ def guardar_pronostico(usuario_id, partido_id, gl, gv):
         )
 
 
+def borrar_pronostico(usuario_id, partido_id):
+    with conn() as c:
+        c.execute(
+            "DELETE FROM pronosticos WHERE usuario_id=? AND partido_id=?",
+            (usuario_id, partido_id),
+        )
+
+
 def pronosticos_de(usuario_id):
     with conn() as c:
         rows = c.execute(

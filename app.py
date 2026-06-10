@@ -266,7 +266,10 @@ def vista_pronosticos(user):
         grupos.setdefault(p["fase"], []).append(p)
     claves = sorted(grupos.keys(), key=orden_fase)
 
-    st.caption("Cargá los goles de cada partido y guardá al final. 🟢 +3 resultado exacto · 🟡 +1 ganador/empate.")
+    st.caption(
+        "Cargá los goles y guardá al final. Para **anular** un pronóstico, dejá las dos "
+        "casillas vacías y guardá. 🟢 +3 resultado exacto · 🟡 +1 ganador/empate."
+    )
 
     visibles = []
     with st.form("form_prono"):
@@ -287,16 +290,24 @@ def vista_pronosticos(user):
         guardar = st.form_submit_button("💾 Guardar mis pronósticos", type="primary")
 
     if guardar:
-        n = 0
+        n = borrados = 0
         for pid in visibles:
             gl = st.session_state.get(f"gl_{pid}")
             gv = st.session_state.get(f"gv_{pid}")
-            if gl is None or gv is None:
+            tenia = mis.get(pid)
+            if gl is None and gv is None:
+                if tenia:                       # vaciar ambos goles = anular pronóstico
+                    db.borrar_pronostico(user["id"], pid)
+                    borrados += 1
                 continue
-            if mis.get(pid) != (gl, gv):
+            if gl is None or gv is None:
+                continue                        # medio cargado: se ignora
+            if tenia != (gl, gv):
                 db.guardar_pronostico(user["id"], pid, int(gl), int(gv))
                 n += 1
-        st.success(f"Guardado ✔ ({n} pronóstico/s actualizados)")
+        msg = f"Guardado ✔ ({n} actualizados"
+        msg += f", {borrados} borrados)" if borrados else ")"
+        st.success(msg)
         st.rerun()
 
 
