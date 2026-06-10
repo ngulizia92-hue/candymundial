@@ -1,10 +1,14 @@
 """Capa de datos del Prode (SQLite)."""
+import os
 import sqlite3
 import hashlib
 from datetime import datetime
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent / "prode.db"
+# Ruta de la base. En EasyPanel apuntá PRODE_DB a un volumen persistente
+# (ej. /data/prode.db) para que NO se borre en cada redeploy.
+DB_PATH = Path(os.environ.get("PRODE_DB", Path(__file__).parent / "prode.db"))
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 # Puntos
 PTS_EXACTO = 3   # acertás el resultado exacto (ej 2-1)

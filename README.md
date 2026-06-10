@@ -27,9 +27,18 @@ Abre en `http://localhost:8501`.
 
 Se ajusta en `database.py` (`PTS_EXACTO`, `PTS_GANADOR`).
 
-## Deploy
+## Deploy en EasyPanel
 
-- **Streamlit Community Cloud:** conectar este repo y elegir `app.py`.
-- **EasyPanel / VPS:** correr con `streamlit run app.py --server.port 8501`.
+1. **Create Service → App** y conectá este repo de GitHub (branch `main`).
+2. **Build:** tipo **Dockerfile** (ya está en el repo, lo detecta solo).
+3. **Domains / Proxy:** apuntá el puerto interno **8501**.
+4. **Volumes (importante):** montá un volumen en **`/data`**.
+   La base queda en `/data/prode.db` (var `PRODE_DB`), así **no se borra** en cada redeploy.
+5. Deploy. Entrás por el dominio que te da EasyPanel; el **primer usuario que crees es admin**.
 
-> La base `prode.db` se crea sola al primer arranque y está en `.gitignore`.
+> Sin el volumen en `/data`, cada redeploy borra usuarios, partidos y pronósticos.
+
+## Deploy alternativos
+
+- **Streamlit Community Cloud:** conectar el repo y elegir `app.py`.
+- **Local:** `streamlit run app.py`.
