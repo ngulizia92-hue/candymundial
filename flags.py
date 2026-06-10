@@ -44,6 +44,6 @@ def img(pais, h=14):
             "background:#444;border-radius:2px;vertical-align:middle'></span>"
         )
     return (
-        f"<img src='https://flagcdn.com/h40/{cod}.png' "
+        f"<img class='eq-flag' src='https://flagcdn.com/h40/{cod}.png' "
         f"height='{h}' style='vertical-align:middle;border-radius:2px' alt=''>"
     )

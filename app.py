@@ -175,13 +175,34 @@ div[data-testid="stNumberInput"] input {
     text-align: center; padding: 4px 2px; font-weight: 700;
 }
 div[data-testid="stNumberInput"] { min-width: 0; }
+
+/* ---------- CELULAR ---------- */
+@media (max-width: 640px) {
+  /* La grilla de grupos pasa a 1 por fila (apila vertical) */
+  [data-testid="stForm"] [data-testid="stHorizontalBlock"]:not([data-testid="stColumn"] [data-testid="stHorizontalBlock"]) {
+    flex-direction: column !important;
+  }
+  /* Las filas de partido se mantienen en una sola línea horizontal */
+  [data-testid="stColumn"] [data-testid="stHorizontalBlock"] {
+    flex-wrap: nowrap !important;
+    flex-direction: row !important;
+    gap: .1rem !important;
+  }
+  [data-testid="stColumn"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+    min-width: 0 !important;
+  }
+  /* Tipografía y banderas más chicas para que entre todo */
+  .eq-nombre { font-size: .78rem !important; }
+  .eq-flag { height: 11px !important; }
+  div[data-testid="stNumberInput"] input { font-size: .8rem !important; padding: 3px 0 !important; }
+}
 </style>
 """
 
 
 def _equipo_html(pais, align):
     """Nombre + bandera (align 'right' = equipo local: nombre ... bandera)."""
-    nombre = f"<span style='font-weight:600;font-size:.92rem'>{flags.corto(pais)}</span>"
+    nombre = f"<span class='eq-nombre' style='font-weight:600;font-size:.92rem'>{flags.corto(pais)}</span>"
     bandera = flags.img(pais, h=13)
     contenido = f"{nombre}&nbsp;{bandera}" if align == "right" else f"{bandera}&nbsp;{nombre}"
     return (
@@ -278,9 +299,9 @@ def vista_pronosticos(user):
     # --- selector de día ---
     dias = sorted({p["inicio"][:10] for p in partidos})
     opciones = ["Todos"] + dias
-    sel = st.radio(
-        "Día", opciones, horizontal=True, label_visibility="collapsed",
-        format_func=lambda d: "Todos" if d == "Todos" else fmt_dia(d),
+    sel = st.selectbox(
+        "Día", opciones,
+        format_func=lambda d: "Todos los partidos" if d == "Todos" else f"Día {fmt_dia(d)}",
     )
     mostrados = partidos if sel == "Todos" else [p for p in partidos if p["inicio"][:10] == sel]
 
