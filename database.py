@@ -72,8 +72,13 @@ def init_db():
             c.execute("ALTER TABLE usuarios ADD COLUMN token TEXT")
 
 
+def _norm_pin(pin: str) -> str:
+    # PIN sin distinguir mayúsculas/minúsculas ni espacios
+    return pin.strip().lower()
+
+
 def _hash(pin: str) -> str:
-    return hashlib.sha256(pin.encode("utf-8")).hexdigest()
+    return hashlib.sha256(_norm_pin(pin).encode("utf-8")).hexdigest()
 
 
 def _nuevo_token() -> str:
@@ -84,6 +89,11 @@ def _nuevo_token() -> str:
 def crear_usuario(nombre: str, pin: str, es_admin: bool = False):
     nombre = nombre.strip()
     with conn() as c:
+        existe = c.execute(
+            "SELECT 1 FROM usuarios WHERE nombre = ? COLLATE NOCASE", (nombre,)
+        ).fetchone()
+        if existe:
+            raise ValueError("Ese nombre ya existe.")
         c.execute(
             "INSERT INTO usuarios(nombre, pin_hash, es_admin, creado, token) VALUES (?,?,?,?,?)",
             (nombre, _hash(pin), int(es_admin), datetime.now().isoformat(), _nuevo_token()),
@@ -93,7 +103,7 @@ def crear_usuario(nombre: str, pin: str, es_admin: bool = False):
 def login(nombre: str, pin: str):
     with conn() as c:
         row = c.execute(
-            "SELECT * FROM usuarios WHERE nombre = ? AND pin_hash = ?",
+            "SELECT * FROM usuarios WHERE nombre = ? COLLATE NOCASE AND pin_hash = ?",
             (nombre.strip(), _hash(pin)),
         ).fetchone()
         if not row:
