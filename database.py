@@ -128,23 +128,30 @@ def listar_partidos():
 
 
 def seed_partidos(lista):
-    """Inserta partidos evitando duplicados (mismo fase+local+visitante).
-    Devuelve cuántos se insertaron nuevos."""
-    nuevos = 0
+    """Carga/actualiza partidos. Hace match por (local, visitante):
+    - si ya existe, actualiza fase e inicio (no pisa el resultado cargado);
+    - si no, lo inserta.
+    Re-ejecutable sin duplicar. Devuelve (nuevos, actualizados)."""
+    nuevos = actualizados = 0
     with conn() as c:
         for p in lista:
-            existe = c.execute(
-                "SELECT 1 FROM partidos WHERE fase=? AND local=? AND visitante=?",
-                (p["fase"], p["local"], p["visitante"]),
+            row = c.execute(
+                "SELECT id FROM partidos WHERE local=? AND visitante=?",
+                (p["local"], p["visitante"]),
             ).fetchone()
-            if existe:
-                continue
-            c.execute(
-                "INSERT INTO partidos(fase, local, visitante, inicio) VALUES (?,?,?,?)",
-                (p["fase"], p["local"], p["visitante"], p["inicio"]),
-            )
-            nuevos += 1
-    return nuevos
+            if row:
+                c.execute(
+                    "UPDATE partidos SET fase=?, inicio=? WHERE id=?",
+                    (p["fase"], p["inicio"], row["id"]),
+                )
+                actualizados += 1
+            else:
+                c.execute(
+                    "INSERT INTO partidos(fase, local, visitante, inicio) VALUES (?,?,?,?)",
+                    (p["fase"], p["local"], p["visitante"], p["inicio"]),
+                )
+                nuevos += 1
+    return nuevos, actualizados
 
 
 # ---------- pronosticos ----------

@@ -161,13 +161,13 @@ def vista_admin():
 
     with st.expander("🏆 Cargar fixture Mundial 2026 (fase de grupos)", expanded=False):
         st.caption(
-            "Carga los 72 partidos de la fase de grupos. No duplica si ya están. "
-            "⚠️ Las fechas/horas son tentativas por jornada: ajustá la hora real de "
-            "cada partido más abajo (de eso depende el cierre de pronósticos)."
+            "Carga los 72 partidos de la fase de grupos con fecha y hora de Argentina. "
+            "Se puede volver a apretar para corregir fechas: no duplica y no pisa "
+            "resultados ya cargados."
         )
-        if st.button("Cargar fixture oficial"):
-            n = db.seed_partidos(fixture_2026.partidos_fase_grupos())
-            st.success(f"Listo: {n} partidos nuevos cargados.")
+        if st.button("Cargar / actualizar fixture oficial"):
+            nuevos, act = db.seed_partidos(fixture_2026.partidos_fase_grupos())
+            st.success(f"Listo: {nuevos} partidos nuevos, {act} actualizados.")
             st.rerun()
 
     with st.expander("➕ Cargar partido", expanded=False):
