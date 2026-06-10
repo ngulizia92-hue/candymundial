@@ -1,4 +1,5 @@
 """Candy Mundial — Prode del Mundial 2026 (Streamlit)."""
+import io
 from datetime import datetime, date, time
 from zoneinfo import ZoneInfo
 
@@ -466,12 +467,21 @@ def vista_admin():
         )
         pron = db.exportar_pronosticos()
         if pron:
-            csv = pd.DataFrame(pron).to_csv(index=False).encode("utf-8")
+            df = pd.DataFrame(pron)
             c2.download_button(
                 "⬇️ Pronósticos (CSV)",
-                data=csv,
+                data=df.to_csv(index=False).encode("utf-8"),
                 file_name="pronosticos.csv",
                 mime="text/csv",
+                use_container_width=True,
+            )
+            buf = io.BytesIO()
+            df.to_excel(buf, index=False, engine="openpyxl")
+            st.download_button(
+                "⬇️ Pronósticos (Excel)",
+                data=buf.getvalue(),
+                file_name="pronosticos.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True,
             )
         else:
