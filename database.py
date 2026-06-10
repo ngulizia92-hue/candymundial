@@ -141,6 +141,13 @@ def login(nombre: str, pin: str, liga: str = "general"):
     return u
 
 
+def borrar_usuario(usuario_id):
+    """Elimina un usuario y todos sus pronósticos."""
+    with conn() as c:
+        c.execute("DELETE FROM pronosticos WHERE usuario_id=?", (usuario_id,))
+        c.execute("DELETE FROM usuarios WHERE id=?", (usuario_id,))
+
+
 def resetear_pin(usuario_id, nuevo_pin):
     with conn() as c:
         c.execute(

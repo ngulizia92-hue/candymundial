@@ -444,6 +444,22 @@ def vista_admin(user):
                         st.success(f"PIN de {sel} actualizado. Avisale el nuevo PIN.")
                     else:
                         st.error("Escribí un PIN nuevo.")
+
+            st.markdown("**🗑 Eliminar usuario**")
+            borrables = {u["nombre"]: u["id"] for u in usuarios if u["id"] != user["id"]}
+            if borrables:
+                with st.form("borrar_user"):
+                    seld = st.selectbox("Usuario a eliminar", list(borrables.keys()))
+                    conf = st.checkbox("Confirmo (borra también sus pronósticos)")
+                    if st.form_submit_button("Eliminar usuario"):
+                        if conf:
+                            db.borrar_usuario(borrables[seld])
+                            st.success(f"{seld} eliminado.")
+                            st.rerun()
+                        else:
+                            st.error("Marcá la confirmación para eliminar.")
+            else:
+                st.caption("No hay otros usuarios para eliminar (no podés borrarte a vos mismo).")
         else:
             st.caption("Todavía no hay usuarios en esta liga.")
 
