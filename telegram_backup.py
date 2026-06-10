@@ -59,10 +59,9 @@ def enviar_backup():
     )
     pron = db.exportar_pronosticos()
     if pron:
-        buf = io.BytesIO()
-        pd.DataFrame(pron).to_excel(buf, index=False, engine="openpyxl")
+        csv = pd.DataFrame(pron).to_csv(index=False).encode("utf-8-sig")
         enviar_documento(
-            f"pronosticos_{fecha}.xlsx", buf.getvalue(), "Pronósticos (Excel)"
+            f"pronosticos_{fecha}.csv", csv, "Pronósticos (CSV)"
         )
     return True
 
