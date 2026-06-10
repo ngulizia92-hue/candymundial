@@ -176,6 +176,9 @@ div[data-testid="stNumberInput"] input {
 }
 div[data-testid="stNumberInput"] { min-width: 0; }
 
+/* Inputs en 16px: evita que el celular (iOS) haga zoom al tocarlos */
+input, textarea, select { font-size: 16px !important; }
+
 /* ---------- CELULAR ---------- */
 @media (max-width: 640px) {
   /* La grilla de grupos pasa a 1 por fila (apila vertical) */
@@ -199,10 +202,10 @@ div[data-testid="stNumberInput"] { min-width: 0; }
   .eq-nombre { font-size: .76rem !important; }
   .eq-flag { height: 11px !important; }
   .meta { font-size: .68rem !important; }
-  /* Casillas de goles más bajas y sin margen extra */
+  /* Casillas de goles compactas (font 16px para no disparar el zoom de iOS) */
   div[data-testid="stNumberInput"] input {
-    font-size: .82rem !important; padding: 2px 0 !important;
-    min-height: 1.7rem !important; height: 1.7rem !important;
+    font-size: 16px !important; padding: 2px 0 !important;
+    min-height: 1.9rem !important; height: 1.9rem !important;
   }
   div[data-testid="stNumberInput"], div[data-testid="stElementContainer"] {
     margin-bottom: 0 !important;
