@@ -141,6 +141,14 @@ def login(nombre: str, pin: str, liga: str = "general"):
     return u
 
 
+def resetear_pin(usuario_id, nuevo_pin):
+    with conn() as c:
+        c.execute(
+            "UPDATE usuarios SET pin_hash=? WHERE id=?",
+            (_hash(nuevo_pin), usuario_id),
+        )
+
+
 def usuario_por_token(token: str):
     if not token:
         return None

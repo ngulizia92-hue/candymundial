@@ -422,8 +422,30 @@ def vista_partidos():
     st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
 
-def vista_admin():
+def vista_admin(user):
     st.subheader("⚙️ Admin")
+
+    with st.expander(f"👥 Usuarios de la liga «{user['liga']}»", expanded=False):
+        usuarios = db.listar_usuarios(user["liga"])
+        if usuarios:
+            df = pd.DataFrame(
+                [{"Usuario": u["nombre"], "Admin": "✓" if u["es_admin"] else ""} for u in usuarios]
+            )
+            df.index = range(1, len(df) + 1)
+            st.dataframe(df, use_container_width=True)
+            st.markdown("**🔑 Resetear PIN de un usuario**")
+            por_nombre = {u["nombre"]: u["id"] for u in usuarios}
+            with st.form("reset_pin"):
+                sel = st.selectbox("Usuario", list(por_nombre.keys()))
+                nuevo = st.text_input("Nuevo PIN", type="password")
+                if st.form_submit_button("Resetear PIN"):
+                    if nuevo.strip():
+                        db.resetear_pin(por_nombre[sel], nuevo)
+                        st.success(f"PIN de {sel} actualizado. Avisale el nuevo PIN.")
+                    else:
+                        st.error("Escribí un PIN nuevo.")
+        else:
+            st.caption("Todavía no hay usuarios en esta liga.")
 
     with st.expander("🔄 Sincronizar con la API (recomendado)", expanded=True):
         st.caption(
@@ -552,4 +574,4 @@ else:
         vista_partidos()
     if user["es_admin"]:
         with seleccion[3]:
-            vista_admin()
+            vista_admin(user)
