@@ -358,11 +358,12 @@ def vista_admin():
         if st.button("Sincronizar ahora", disabled=not api_football.hay_token()):
             try:
                 partidos = api_football.obtener_partidos()
-                nuevos, act, conres = db.sync_partidos(partidos)
-                st.success(
-                    f"Sincronizado: {nuevos} nuevos, {act} actualizados, "
-                    f"{conres} con resultado final."
-                )
+                nuevos, act, conres, limp = db.sync_partidos(partidos)
+                msg = (f"Sincronizado: {nuevos} nuevos, {act} actualizados, "
+                       f"{conres} con resultado final.")
+                if limp:
+                    msg += f" Se limpiaron {limp} partidos viejos/duplicados."
+                st.success(msg)
                 st.rerun()
             except Exception as e:
                 st.error(f"Error al sincronizar: {e}")
@@ -377,7 +378,7 @@ def vista_admin():
                      disabled=not (api_football.hay_token() and conf)):
             try:
                 db.borrar_todo_fixture()
-                nuevos, act, conres = db.sync_partidos(api_football.obtener_partidos())
+                nuevos, act, conres, _ = db.sync_partidos(api_football.obtener_partidos())
                 st.success(f"Fixture reemplazado: {nuevos} partidos cargados.")
                 st.rerun()
             except Exception as e:

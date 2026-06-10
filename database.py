@@ -167,7 +167,15 @@ def sync_partidos(lista):
                      p["gl"] if tiene_res else None, p["gv"] if tiene_res else None, p["api_id"]),
                 )
                 nuevos += 1
-    return nuevos, actualizados, con_resultado
+
+        # Limpieza: borra partidos que NO vienen de la API (datos viejos/duplicados).
+        # Así la base queda exactamente igual al fixture oficial.
+        huer = [r["id"] for r in c.execute("SELECT id FROM partidos WHERE api_id IS NULL")]
+        if huer:
+            marks = ",".join("?" * len(huer))
+            c.execute(f"DELETE FROM pronosticos WHERE partido_id IN ({marks})", huer)
+            c.execute("DELETE FROM partidos WHERE api_id IS NULL")
+    return nuevos, actualizados, con_resultado, len(huer)
 
 
 def borrar_todo_fixture():
