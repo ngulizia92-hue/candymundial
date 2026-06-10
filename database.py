@@ -211,6 +211,26 @@ def sync_partidos(lista):
     return nuevos, actualizados, con_resultado, len(huer)
 
 
+def backup_db_bytes():
+    """Devuelve la base completa como bytes (para descargar de respaldo)."""
+    with open(DB_PATH, "rb") as f:
+        return f.read()
+
+
+def exportar_pronosticos():
+    """Todos los pronósticos con nombre de jugador y datos del partido (para CSV)."""
+    with conn() as c:
+        rows = c.execute(
+            """SELECT u.nombre AS jugador, p.fase, p.local, p.visitante, p.inicio,
+                      pr.goles_local, pr.goles_visitante, pr.actualizado
+               FROM pronosticos pr
+               JOIN usuarios u ON u.id = pr.usuario_id
+               JOIN partidos p ON p.id = pr.partido_id
+               ORDER BY u.nombre, p.inicio"""
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
 def estadisticas():
     with conn() as c:
         u = c.execute("SELECT COUNT(*) FROM usuarios").fetchone()[0]

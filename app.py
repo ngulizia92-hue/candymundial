@@ -454,6 +454,29 @@ def vista_admin():
             "y volvé acá. Si siguen igual, el volumen está bien configurado."
         )
 
+    with st.expander("💾 Backup / Exportar", expanded=False):
+        st.caption("Descargá un respaldo cuando quieras (recomendado antes de cada fecha).")
+        c1, c2 = st.columns(2)
+        c1.download_button(
+            "⬇️ Base completa (.db)",
+            data=db.backup_db_bytes(),
+            file_name="prode_backup.db",
+            mime="application/octet-stream",
+            use_container_width=True,
+        )
+        pron = db.exportar_pronosticos()
+        if pron:
+            csv = pd.DataFrame(pron).to_csv(index=False).encode("utf-8")
+            c2.download_button(
+                "⬇️ Pronósticos (CSV)",
+                data=csv,
+                file_name="pronosticos.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
+        else:
+            c2.caption("Todavía no hay pronósticos para exportar.")
+
 
 # ---------------- main ----------------
 restaurar_sesion()
