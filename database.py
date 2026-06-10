@@ -127,6 +127,26 @@ def listar_partidos():
         return [dict(r) for r in c.execute("SELECT * FROM partidos ORDER BY inicio")]
 
 
+def seed_partidos(lista):
+    """Inserta partidos evitando duplicados (mismo fase+local+visitante).
+    Devuelve cuántos se insertaron nuevos."""
+    nuevos = 0
+    with conn() as c:
+        for p in lista:
+            existe = c.execute(
+                "SELECT 1 FROM partidos WHERE fase=? AND local=? AND visitante=?",
+                (p["fase"], p["local"], p["visitante"]),
+            ).fetchone()
+            if existe:
+                continue
+            c.execute(
+                "INSERT INTO partidos(fase, local, visitante, inicio) VALUES (?,?,?,?)",
+                (p["fase"], p["local"], p["visitante"], p["inicio"]),
+            )
+            nuevos += 1
+    return nuevos
+
+
 # ---------- pronosticos ----------
 def guardar_pronostico(usuario_id, partido_id, gl, gv):
     with conn() as c:
