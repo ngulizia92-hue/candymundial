@@ -85,9 +85,9 @@ def fmt_hora(iso):
 
 
 def fmt_hora_corta(iso):
-    # "16:00" -> "16h" ; "16:30" -> "16:30"
+    # "16:00" -> "16h" ; "00:00" -> "00h" ; "16:30" -> "16:30"
     hh, mm = iso[11:13], iso[14:16]
-    return f"{int(hh)}h" if mm == "00" else f"{int(hh)}:{mm}"
+    return f"{hh}h" if mm == "00" else f"{hh}:{mm}"
 
 
 def parse_marcador(s):
