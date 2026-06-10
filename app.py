@@ -191,10 +191,22 @@ div[data-testid="stNumberInput"] { min-width: 0; }
   [data-testid="stColumn"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
     min-width: 0 !important;
   }
+  /* Filas de partido más compactas (menos espacio vertical) */
+  [data-testid="stColumn"] [data-testid="stHorizontalBlock"] {
+    margin-bottom: 0 !important;
+  }
   /* Tipografía y banderas más chicas para que entre todo */
-  .eq-nombre { font-size: .78rem !important; }
+  .eq-nombre { font-size: .76rem !important; }
   .eq-flag { height: 11px !important; }
-  div[data-testid="stNumberInput"] input { font-size: .8rem !important; padding: 3px 0 !important; }
+  .meta { font-size: .68rem !important; }
+  /* Casillas de goles más bajas y sin margen extra */
+  div[data-testid="stNumberInput"] input {
+    font-size: .82rem !important; padding: 2px 0 !important;
+    min-height: 1.7rem !important; height: 1.7rem !important;
+  }
+  div[data-testid="stNumberInput"], div[data-testid="stElementContainer"] {
+    margin-bottom: 0 !important;
+  }
 }
 </style>
 """
@@ -202,26 +214,26 @@ div[data-testid="stNumberInput"] { min-width: 0; }
 
 def _equipo_html(pais, align):
     """Nombre + bandera (align 'right' = equipo local: nombre ... bandera)."""
-    nombre = f"<span class='eq-nombre' style='font-weight:600;font-size:.92rem'>{flags.corto(pais)}</span>"
+    nombre = f"<span class='eq-nombre' style='font-weight:600;font-size:.9rem'>{flags.corto(pais)}</span>"
     bandera = flags.img(pais, h=13)
     contenido = f"{nombre}&nbsp;{bandera}" if align == "right" else f"{bandera}&nbsp;{nombre}"
     return (
-        f"<div style='text-align:{align};line-height:2.4;white-space:nowrap;"
+        f"<div style='text-align:{align};line-height:1.7;white-space:nowrap;"
         f"overflow:hidden;text-overflow:ellipsis'>{contenido}</div>"
     )
 
 
 def _meta_html(texto):
     return (
-        f"<div style='text-align:center;color:#8a93a6;font-size:.78rem;"
-        f"line-height:2.4;white-space:nowrap'>{texto}</div>"
+        f"<div class='meta' style='text-align:center;color:#8a93a6;font-size:.76rem;"
+        f"line-height:1.7;white-space:nowrap'>{texto}</div>"
     )
 
 
 def _fila_partido(par, mis, visibles):
     """Fila: [local] [fecha] [gl] : [gv] [hora] [visitante]."""
     lc, fc, gl_c, sep, gv_c, hc, vc = st.columns(
-        [6, 1.4, 1.5, 0.5, 1.5, 1.4, 6], vertical_alignment="center"
+        [5, 1.7, 1.2, 0.3, 1.2, 1.7, 5], vertical_alignment="center"
     )
     lc.markdown(_equipo_html(par["local"], "right"), unsafe_allow_html=True)
     vc.markdown(_equipo_html(par["visitante"], "left"), unsafe_allow_html=True)
