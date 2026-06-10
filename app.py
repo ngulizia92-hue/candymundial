@@ -323,6 +323,10 @@ def vista_pronosticos(user):
 
     mis = db.pronosticos_de(user["id"])
 
+    # Aviso de guardado (persiste tras el rerun)
+    if msg := st.session_state.pop("msg_guardado", None):
+        st.success(msg)
+
     # --- selector de día ---
     dias = sorted({p["inicio"][:10] for p in partidos})
     opciones = ["Todos"] + dias
@@ -377,9 +381,12 @@ def vista_pronosticos(user):
             if tenia != (gl, gv):
                 db.guardar_pronostico(user["id"], pid, int(gl), int(gv))
                 n += 1
-        msg = f"Guardado ✔ ({n} actualizados"
-        msg += f", {borrados} borrados)" if borrados else ")"
-        st.success(msg)
+        if borrados:
+            msg = f"✅ ¡Guardado! {n} pronóstico/s guardados y {borrados} anulado/s."
+        else:
+            msg = f"✅ ¡Pronósticos guardados! ({n} actualizado/s)."
+        st.session_state["msg_guardado"] = msg
+        st.toast("Guardado ✔", icon="✅")
         st.rerun()
 
 
