@@ -41,8 +41,12 @@ STAGE_ES = {
 GRUPO_ES = {f"GROUP_{l}": f"Grupo {l}" for l in "ABCDEFGHIJKL"}
 
 
+def _token():
+    return os.environ.get("FOOTBALL_DATA_TOKEN", "").strip()
+
+
 def hay_token():
-    return bool(os.environ.get("FOOTBALL_DATA_TOKEN"))
+    return bool(_token())
 
 
 def _es(nombre):
@@ -67,7 +71,7 @@ def _inicio_art(utc_iso):
 def obtener_partidos():
     """Devuelve lista de dicts: api_id, fase, local, visitante, inicio (ART),
     gl, gv (None si no finalizó). Lanza excepción si falla la API/token."""
-    token = os.environ.get("FOOTBALL_DATA_TOKEN")
+    token = _token()
     if not token:
         raise RuntimeError("Falta la variable de entorno FOOTBALL_DATA_TOKEN.")
 
