@@ -367,6 +367,22 @@ def vista_admin():
             except Exception as e:
                 st.error(f"Error al sincronizar: {e}")
 
+        st.divider()
+        st.caption(
+            "¿Quedaron partidos **duplicados** de cargas anteriores? Esto **borra TODO** "
+            "(partidos y pronósticos) y recarga limpio desde la API."
+        )
+        conf = st.checkbox("Confirmo borrar todo y recargar")
+        if st.button("🧹 Borrar todo y recargar desde API",
+                     disabled=not (api_football.hay_token() and conf)):
+            try:
+                db.borrar_todo_fixture()
+                nuevos, act, conres = db.sync_partidos(api_football.obtener_partidos())
+                st.success(f"Fixture reemplazado: {nuevos} partidos cargados.")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error: {e}")
+
     with st.expander("🏆 Cargar fixture offline (sin API)", expanded=False):
         st.caption(
             "Carga los 72 partidos de la fase de grupos con fecha y hora de Argentina. "

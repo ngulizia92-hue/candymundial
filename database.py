@@ -170,6 +170,13 @@ def sync_partidos(lista):
     return nuevos, actualizados, con_resultado
 
 
+def borrar_todo_fixture():
+    """Borra TODOS los partidos y pronósticos (para recargar limpio)."""
+    with conn() as c:
+        c.execute("DELETE FROM pronosticos")
+        c.execute("DELETE FROM partidos")
+
+
 def cargar_resultado(pid, gl, gv):
     with conn() as c:
         c.execute(
