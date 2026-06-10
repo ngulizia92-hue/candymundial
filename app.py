@@ -15,6 +15,7 @@ def ahora_art():
 
 import database as db
 import fixture_2026
+import api_football
 
 st.set_page_config(page_title="Candy Mundial 🏆", page_icon="🏆", layout="centered")
 
@@ -159,7 +160,30 @@ def vista_partidos():
 def vista_admin():
     st.subheader("⚙️ Admin")
 
-    with st.expander("🏆 Cargar fixture Mundial 2026 (fase de grupos)", expanded=False):
+    with st.expander("🔄 Sincronizar con la API (recomendado)", expanded=True):
+        st.caption(
+            "Trae el fixture completo (grupos + eliminatorias) y los resultados "
+            "de los partidos ya jugados desde football-data.org. Apretalo cuando "
+            "quieras actualizar resultados; no pisa resultados con partidos sin terminar."
+        )
+        if not api_football.hay_token():
+            st.warning(
+                "Falta configurar la variable de entorno **FOOTBALL_DATA_TOKEN** "
+                "en EasyPanel para usar la sincronización automática."
+            )
+        if st.button("Sincronizar ahora", disabled=not api_football.hay_token()):
+            try:
+                partidos = api_football.obtener_partidos()
+                nuevos, act, conres = db.sync_partidos(partidos)
+                st.success(
+                    f"Sincronizado: {nuevos} nuevos, {act} actualizados, "
+                    f"{conres} con resultado final."
+                )
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error al sincronizar: {e}")
+
+    with st.expander("🏆 Cargar fixture offline (sin API)", expanded=False):
         st.caption(
             "Carga los 72 partidos de la fase de grupos con fecha y hora de Argentina. "
             "Se puede volver a apretar para corregir fechas: no duplica y no pisa "

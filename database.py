@@ -38,9 +38,10 @@ def init_db():
                 fase TEXT NOT NULL DEFAULT 'Grupos',
                 local TEXT NOT NULL,
                 visitante TEXT NOT NULL,
-                inicio TEXT NOT NULL,          -- ISO datetime, cierre de pronósticos
+                inicio TEXT NOT NULL,          -- ISO datetime (hora ARG), cierre de pronósticos
                 goles_local INTEGER,           -- NULL hasta que se carga el resultado
-                goles_visitante INTEGER
+                goles_visitante INTEGER,
+                api_id INTEGER                 -- id del partido en football-data.org (NULL si es manual)
             );
 
             CREATE TABLE IF NOT EXISTS pronosticos (
@@ -55,6 +56,14 @@ def init_db():
                 FOREIGN KEY(partido_id) REFERENCES partidos(id)
             );
             """
+        )
+        # Migración para bases creadas antes de la columna api_id
+        cols = [r["name"] for r in c.execute("PRAGMA table_info(partidos)")]
+        if "api_id" not in cols:
+            c.execute("ALTER TABLE partidos ADD COLUMN api_id INTEGER")
+        c.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_partidos_api "
+            "ON partidos(api_id) WHERE api_id IS NOT NULL"
         )
 
 
@@ -112,6 +121,53 @@ def borrar_partido(pid):
     with conn() as c:
         c.execute("DELETE FROM pronosticos WHERE partido_id=?", (pid,))
         c.execute("DELETE FROM partidos WHERE id=?", (pid,))
+
+
+def sync_partidos(lista):
+    """Sincroniza con la API (match por api_id):
+    - inserta partidos nuevos;
+    - actualiza fase, equipos, inicio y resultado;
+    - el resultado SOLO se escribe si la API lo trae finalizado (no pisa con None).
+    Devuelve (nuevos, actualizados, con_resultado)."""
+    nuevos = actualizados = con_resultado = 0
+    with conn() as c:
+        for p in lista:
+            row = c.execute(
+                "SELECT id FROM partidos WHERE api_id=?", (p["api_id"],)
+            ).fetchone()
+            # Adopta un partido cargado offline (sin api_id) que coincida en equipos,
+            # incluso si el local/visitante quedó invertido (la API define el orden).
+            if not row and p["local"] != "Por definir" and p["visitante"] != "Por definir":
+                row = c.execute(
+                    "SELECT id FROM partidos WHERE api_id IS NULL AND "
+                    "((local=? AND visitante=?) OR (local=? AND visitante=?))",
+                    (p["local"], p["visitante"], p["visitante"], p["local"]),
+                ).fetchone()
+            tiene_res = p["gl"] is not None and p["gv"] is not None
+            if tiene_res:
+                con_resultado += 1
+            if row:
+                if tiene_res:
+                    c.execute(
+                        "UPDATE partidos SET fase=?, local=?, visitante=?, inicio=?, "
+                        "goles_local=?, goles_visitante=?, api_id=? WHERE id=?",
+                        (p["fase"], p["local"], p["visitante"], p["inicio"], p["gl"], p["gv"], p["api_id"], row["id"]),
+                    )
+                else:
+                    c.execute(
+                        "UPDATE partidos SET fase=?, local=?, visitante=?, inicio=?, api_id=? WHERE id=?",
+                        (p["fase"], p["local"], p["visitante"], p["inicio"], p["api_id"], row["id"]),
+                    )
+                actualizados += 1
+            else:
+                c.execute(
+                    "INSERT INTO partidos(fase, local, visitante, inicio, goles_local, goles_visitante, api_id) "
+                    "VALUES (?,?,?,?,?,?,?)",
+                    (p["fase"], p["local"], p["visitante"], p["inicio"],
+                     p["gl"] if tiene_res else None, p["gv"] if tiene_res else None, p["api_id"]),
+                )
+                nuevos += 1
+    return nuevos, actualizados, con_resultado
 
 
 def cargar_resultado(pid, gl, gv):
