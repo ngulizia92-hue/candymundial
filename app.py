@@ -172,9 +172,12 @@ _CSS_PRONO = """
 /* Casillas de goles limpias (sin botones +/-) */
 div[data-testid="stNumberInput"] button { display: none !important; }
 div[data-testid="stNumberInput"] input {
-    text-align: center; padding: 4px 2px; font-weight: 700;
+    text-align: center; padding: 4px 0; font-weight: 700;
+    min-width: 32px !important;   /* que el número siempre sea visible */
 }
-div[data-testid="stNumberInput"] { min-width: 0; }
+div[data-testid="stNumberInput"], div[data-testid="stNumberInputContainer"] {
+    min-width: 32px !important;
+}
 
 /* Inputs en 16px: evita que el celular (iOS) haga zoom al tocarlos */
 input, textarea, select { font-size: 16px !important; }
