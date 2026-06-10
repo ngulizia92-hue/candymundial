@@ -41,6 +41,31 @@ eliminatorias a medida que se definen y carga los resultados de los partidos
 terminados. Sin token, podés usar igual la carga manual ("fixture offline" + cargar
 resultados a mano).
 
+## Backup automático por Telegram
+
+La app puede mandar un respaldo (base `.db` + pronósticos en Excel) a un chat de Telegram.
+
+**1. Crear el bot y obtener los datos:**
+- Abrí Telegram, hablá con **@BotFather** → `/newbot` → te da el **token**.
+- Mandale un mensaje a tu bot (o agregalo a un grupo y escribí algo).
+- Obtené el **chat_id**: abrí `https://api.telegram.org/bot<TOKEN>/getUpdates` en el navegador y buscá `"chat":{"id":...}`.
+
+**2. Variables de entorno en EasyPanel:**
+```
+TELEGRAM_BOT_TOKEN=<token de BotFather>
+TELEGRAM_CHAT_ID=<id del chat o grupo>
+```
+
+**3. Envío manual:** en la app, **⚙️ Admin → 💾 Backup → Enviar backup por Telegram ahora**.
+
+**4. Envío diario automático (cron en EasyPanel):**
+- En el servicio, sección **Cron Jobs / Scheduled**, creá una tarea con el comando:
+  ```
+  python telegram_backup.py
+  ```
+- Programala a la hora que quieras (ej. `0 9 * * *` = 9:00 todos los días).
+- Corre en el mismo contenedor, así que usa la misma base (`/data`) y las mismas variables.
+
 ## Deploy en EasyPanel
 
 1. **Create Service → App** y conectá este repo de GitHub (branch `main`).

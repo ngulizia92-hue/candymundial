@@ -18,6 +18,7 @@ import database as db
 import fixture_2026
 import api_football
 import flags
+import telegram_backup
 
 st.set_page_config(
     page_title="Candy Mundial 🏆", page_icon="🏆",
@@ -486,6 +487,24 @@ def vista_admin():
             )
         else:
             c2.caption("Todavía no hay pronósticos para exportar.")
+
+        st.divider()
+        st.markdown("**📤 Enviar por Telegram**")
+        if telegram_backup.configurado():
+            st.caption("Se envía la base (.db) y los pronósticos (Excel) al chat configurado.")
+            if st.button("Enviar backup por Telegram ahora"):
+                try:
+                    telegram_backup.enviar_backup()
+                    st.success("Backup enviado por Telegram ✔")
+                except Exception as e:
+                    st.error(f"No se pudo enviar: {e}")
+        else:
+            st.caption(
+                "Para enviar por Telegram configurá en EasyPanel las variables "
+                "**TELEGRAM_BOT_TOKEN** y **TELEGRAM_CHAT_ID**. "
+                "El envío diario automático se hace con un cron que ejecute "
+                "`python telegram_backup.py` (ver README)."
+            )
 
 
 # ---------------- main ----------------
