@@ -392,62 +392,7 @@ def vista_admin():
             except Exception as e:
                 st.error(f"Error al sincronizar: {e}")
 
-        st.divider()
-        st.caption(
-            "¿Quedaron partidos **duplicados** de cargas anteriores? Esto **borra TODO** "
-            "(partidos y pronósticos) y recarga limpio desde la API."
-        )
-        conf = st.checkbox("Confirmo borrar todo y recargar")
-        if st.button("🧹 Borrar todo y recargar desde API",
-                     disabled=not (api_football.hay_token() and conf)):
-            try:
-                db.borrar_todo_fixture()
-                nuevos, act, conres, _ = db.sync_partidos(api_football.obtener_partidos())
-                st.success(f"Fixture reemplazado: {nuevos} partidos cargados.")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Error: {e}")
-
-    with st.expander("🏆 Cargar fixture offline (sin API)", expanded=False):
-        st.caption(
-            "Carga los 72 partidos de la fase de grupos con fecha y hora de Argentina. "
-            "Se puede volver a apretar para corregir fechas: no duplica y no pisa "
-            "resultados ya cargados."
-        )
-        if st.button("Cargar / actualizar fixture oficial"):
-            nuevos, act = db.seed_partidos(fixture_2026.partidos_fase_grupos())
-            st.success(f"Listo: {nuevos} partidos nuevos, {act} actualizados.")
-            st.rerun()
-
-    with st.expander("➕ Cargar partido", expanded=False):
-        with st.form("nuevo_partido"):
-            fase = st.selectbox("Fase", FASES)
-            c1, c2 = st.columns(2)
-            local = c1.selectbox("Local", SELECCIONES, key="np_local")
-            visitante = c2.selectbox("Visitante", SELECCIONES, index=1, key="np_visit")
-            c3, c4 = st.columns(2)
-            f = c3.date_input("Fecha", value=date.today())
-            h = c4.time_input("Hora", value=time(16, 0))
-            if st.form_submit_button("Crear partido"):
-                inicio = datetime.combine(f, h).isoformat()
-                db.crear_partido(fase, local, visitante, inicio)
-                st.success("Partido creado.")
-                st.rerun()
-
-    st.markdown("##### Partidos cargados")
-    for p in db.listar_partidos():
-        with st.container(border=True):
-            st.markdown(f'**{p["local"]} vs {p["visitante"]}** · {p["fase"]} · {fmt_dt(p["inicio"])}')
-            c1, c2, c3, c4 = st.columns([1, 1, 1, 1])
-            gl = c1.number_input("GL", 0, 20, p["goles_local"] or 0, key=f"rgl_{p['id']}")
-            gv = c2.number_input("GV", 0, 20, p["goles_visitante"] or 0, key=f"rgv_{p['id']}")
-            if c3.button("Guardar resultado", key=f"res_{p['id']}"):
-                db.cargar_resultado(p["id"], int(gl), int(gv))
-                st.toast("Resultado cargado ✔")
-                st.rerun()
-            if c4.button("🗑 Borrar", key=f"del_{p['id']}"):
-                db.borrar_partido(p["id"])
-                st.rerun()
+    st.caption(f"Partidos cargados: {len(db.listar_partidos())}")
 
 
 # ---------------- main ----------------
