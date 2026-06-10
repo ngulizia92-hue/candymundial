@@ -211,6 +211,14 @@ def sync_partidos(lista):
     return nuevos, actualizados, con_resultado, len(huer)
 
 
+def estadisticas():
+    with conn() as c:
+        u = c.execute("SELECT COUNT(*) FROM usuarios").fetchone()[0]
+        p = c.execute("SELECT COUNT(*) FROM partidos").fetchone()[0]
+        pr = c.execute("SELECT COUNT(*) FROM pronosticos").fetchone()[0]
+    return {"usuarios": u, "partidos": p, "pronosticos": pr}
+
+
 def borrar_todo_fixture():
     """Borra TODOS los partidos y pronósticos (para recargar limpio)."""
     with conn() as c:

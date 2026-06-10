@@ -431,7 +431,28 @@ def vista_admin():
             except Exception as e:
                 st.error(f"Error al sincronizar: {e}")
 
-    st.caption(f"Partidos cargados: {len(db.listar_partidos())}")
+    with st.expander("🗄️ Estado de la base de datos", expanded=True):
+        ruta = str(db.DB_PATH).replace("\\", "/")
+        persistente = "/data" in ruta
+        st.write(f"Ruta de la base: `{ruta}`")
+        if persistente:
+            st.success("✔ La base está en **/data** (volumen persistente). "
+                       "Los datos sobreviven a cada redeploy.")
+        else:
+            st.error(
+                "⚠️ La base **NO** está en /data. Con cada redeploy se borra todo.\n\n"
+                "En EasyPanel: montá un **volumen en `/data`** y poné la variable "
+                "**`PRODE_DB=/data/prode.db`**."
+            )
+        s = db.estadisticas()
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Usuarios", s["usuarios"])
+        c2.metric("Partidos", s["partidos"])
+        c3.metric("Pronósticos", s["pronosticos"])
+        st.caption(
+            "Prueba definitiva de persistencia: anotá estos números, hacé un **redeploy** "
+            "y volvé acá. Si siguen igual, el volumen está bien configurado."
+        )
 
 
 # ---------------- main ----------------
