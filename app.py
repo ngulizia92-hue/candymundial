@@ -103,6 +103,31 @@ def parse_marcador(s):
 
 
 # ---------------- auth ----------------
+def iniciar_sesion(u):
+    """Guarda sesión en memoria y en la URL (token) para sobrevivir al refresh."""
+    st.session_state.user = u
+    if u.get("token"):
+        st.query_params["t"] = u["token"]
+    st.rerun()
+
+
+def cerrar_sesion():
+    st.session_state.pop("user", None)
+    st.query_params.clear()
+    st.rerun()
+
+
+def restaurar_sesion():
+    """Si hay token en la URL, re-loguea automáticamente."""
+    if "user" in st.session_state:
+        return
+    t = st.query_params.get("t")
+    if t:
+        u = db.usuario_por_token(t)
+        if u:
+            st.session_state.user = u
+
+
 def pantalla_login():
     st.title("🏆 Candy Mundial")
     st.caption("Prode del Mundial 2026")
@@ -126,8 +151,7 @@ def pantalla_login():
             if st.form_submit_button("Ingresar"):
                 u = db.login(nombre, pin)
                 if u:
-                    st.session_state.user = u
-                    st.rerun()
+                    iniciar_sesion(u)
                 else:
                     st.error("Nombre o PIN incorrecto.")
     with tab_registro:
@@ -427,6 +451,7 @@ def vista_admin():
 
 
 # ---------------- main ----------------
+restaurar_sesion()
 if "user" not in st.session_state:
     pantalla_login()
 else:
@@ -436,8 +461,7 @@ else:
         if user["es_admin"]:
             st.caption("Administrador")
         if st.button("Cerrar sesión"):
-            del st.session_state.user
-            st.rerun()
+            cerrar_sesion()
         st.divider()
         st.caption("Puntos: 3 exacto · 1 ganador/empate")
 

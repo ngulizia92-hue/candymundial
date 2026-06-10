@@ -2,6 +2,7 @@
 import os
 import sqlite3
 import hashlib
+import secrets
 from datetime import datetime
 from pathlib import Path
 
@@ -65,10 +66,18 @@ def init_db():
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_partidos_api "
             "ON partidos(api_id) WHERE api_id IS NOT NULL"
         )
+        # Token de sesión persistente (para que el login sobreviva al refresh)
+        ucols = [r["name"] for r in c.execute("PRAGMA table_info(usuarios)")]
+        if "token" not in ucols:
+            c.execute("ALTER TABLE usuarios ADD COLUMN token TEXT")
 
 
 def _hash(pin: str) -> str:
     return hashlib.sha256(pin.encode("utf-8")).hexdigest()
+
+
+def _nuevo_token() -> str:
+    return secrets.token_urlsafe(16)
 
 
 # ---------- usuarios ----------
@@ -76,8 +85,8 @@ def crear_usuario(nombre: str, pin: str, es_admin: bool = False):
     nombre = nombre.strip()
     with conn() as c:
         c.execute(
-            "INSERT INTO usuarios(nombre, pin_hash, es_admin, creado) VALUES (?,?,?,?)",
-            (nombre, _hash(pin), int(es_admin), datetime.now().isoformat()),
+            "INSERT INTO usuarios(nombre, pin_hash, es_admin, creado, token) VALUES (?,?,?,?,?)",
+            (nombre, _hash(pin), int(es_admin), datetime.now().isoformat(), _nuevo_token()),
         )
 
 
@@ -87,6 +96,20 @@ def login(nombre: str, pin: str):
             "SELECT * FROM usuarios WHERE nombre = ? AND pin_hash = ?",
             (nombre.strip(), _hash(pin)),
         ).fetchone()
+        if not row:
+            return None
+        u = dict(row)
+        if not u.get("token"):                      # usuarios viejos sin token
+            u["token"] = _nuevo_token()
+            c.execute("UPDATE usuarios SET token=? WHERE id=?", (u["token"], u["id"]))
+    return u
+
+
+def usuario_por_token(token: str):
+    if not token:
+        return None
+    with conn() as c:
+        row = c.execute("SELECT * FROM usuarios WHERE token=?", (token,)).fetchone()
     return dict(row) if row else None
 
 
