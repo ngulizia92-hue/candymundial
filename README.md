@@ -41,6 +41,17 @@ eliminatorias a medida que se definen y carga los resultados de los partidos
 terminados. Sin token, podés usar igual la carga manual ("fixture offline" + cargar
 resultados a mano).
 
+## Sincronización automática de resultados
+
+Para que los resultados y la tabla se actualicen solos (sin apretar el botón),
+configurá un **cron job** en EasyPanel que ejecute:
+```
+python sync_auto.py
+```
+- Programalo cada 30 min: `*/30 * * * *` (o como prefieras).
+- Usa la misma base (`/data`) y la variable `FOOTBALL_DATA_TOKEN`.
+- Trae el fixture y los resultados de los partidos terminados; no pisa nada cargado a mano.
+
 ## Backup automático por Telegram
 
 La app puede mandar un respaldo (base `.db` + pronósticos en Excel) a un chat de Telegram.
