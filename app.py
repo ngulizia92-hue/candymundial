@@ -273,9 +273,9 @@ def vista_pronosticos(user):
 
     visibles = []
     with st.form("form_prono"):
-        for inicio in range(0, len(claves), 2):       # 2 grupos por fila
-            cols = st.columns(2)
-            for j, gkey in enumerate(claves[inicio:inicio + 2]):
+        for inicio in range(0, len(claves), 3):       # 3 grupos por fila
+            cols = st.columns(3)
+            for j, gkey in enumerate(claves[inicio:inicio + 3]):
                 pgrupo = sorted(grupos[gkey], key=lambda p: p["inicio"])
                 with cols[j]:
                     with st.container(border=True):
