@@ -1,8 +1,17 @@
 """Candy Mundial — Prode del Mundial 2026 (Streamlit)."""
 from datetime import datetime, date, time
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import streamlit as st
+
+# Todo el prode trabaja en hora de Argentina (las horas del fixture son ART).
+ART = ZoneInfo("America/Argentina/Buenos_Aires")
+
+
+def ahora_art():
+    """Fecha/hora actual en Argentina, naive (para comparar con el fixture)."""
+    return datetime.now(ART).replace(tzinfo=None)
 
 import database as db
 import fixture_2026
@@ -35,7 +44,7 @@ def fmt_dt(iso):
 
 
 def cerrado(par):
-    return datetime.now() >= parse_dt(par["inicio"])
+    return ahora_art() >= parse_dt(par["inicio"])
 
 
 def resultado_txt(par):
