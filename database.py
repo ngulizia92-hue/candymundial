@@ -17,7 +17,8 @@ PTS_GANADOR = 1  # acertás quién gana / empate, pero no el marcador
 
 
 def conn():
-    c = sqlite3.connect(DB_PATH)
+    # timeout: espera si la base está bloqueada por otra escritura (sync en paralelo)
+    c = sqlite3.connect(DB_PATH, timeout=30)
     c.row_factory = sqlite3.Row
     return c
 

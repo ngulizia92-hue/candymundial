@@ -19,6 +19,7 @@ import fixture_2026
 import api_football
 import flags
 import telegram_backup
+import auto_sync
 
 st.set_page_config(
     page_title="Candy Mundial 🏆", page_icon="🏆",
@@ -26,6 +27,7 @@ st.set_page_config(
 )
 
 db.init_db()
+auto_sync.iniciar()   # sincroniza resultados cada 30 min en segundo plano
 
 # Selecciones (para los selectores; igual se puede escribir cualquier nombre).
 SELECCIONES = [
