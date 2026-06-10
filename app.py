@@ -16,8 +16,12 @@ def ahora_art():
 import database as db
 import fixture_2026
 import api_football
+import flags
 
-st.set_page_config(page_title="Candy Mundial 🏆", page_icon="🏆", layout="centered")
+st.set_page_config(
+    page_title="Candy Mundial 🏆", page_icon="🏆",
+    layout="wide", initial_sidebar_state="collapsed",
+)
 
 db.init_db()
 
@@ -52,6 +56,39 @@ def resultado_txt(par):
     if par["goles_local"] is None:
         return "—"
     return f'{par["goles_local"]} - {par["goles_visitante"]}'
+
+
+_ORDEN_ELIM = {"16avos": 1, "Octavos": 2, "Cuartos": 3, "Semifinal": 4, "3er puesto": 5, "Final": 6}
+
+
+def orden_fase(f):
+    """Grupos primero (A→L), después eliminatorias en orden."""
+    if f.startswith("Grupo "):
+        return (0, f)
+    return (1, _ORDEN_ELIM.get(f, 9), f)
+
+
+def fmt_dia(iso10):
+    # "2026-06-11" -> "11/06"
+    return f"{iso10[8:10]}/{iso10[5:7]}"
+
+
+def fmt_hora(iso):
+    return iso[11:16]  # "16:00"
+
+
+def parse_marcador(s):
+    """'2-1' o '2:1' -> (2,1); inválido/vacío -> None."""
+    if not s:
+        return None
+    s = s.strip().replace(":", "-").replace(" ", "")
+    parts = s.split("-")
+    if len(parts) != 2:
+        return None
+    try:
+        return int(parts[0]), int(parts[1])
+    except ValueError:
+        return None
 
 
 # ---------------- auth ----------------
@@ -95,36 +132,114 @@ def pantalla_login():
 
 
 # ---------------- vistas ----------------
+def _equipo_html(pais, align):
+    """Nombre + bandera alineados (align 'right' = bandera a la derecha del nombre)."""
+    nombre = f"<span style='font-weight:600;font-size:.9rem'>{flags.corto(pais)}</span>"
+    bandera = flags.img(pais)
+    if align == "right":   # equipo local: nombre ... bandera
+        contenido = f"{nombre}&nbsp;{bandera}"
+    else:                  # equipo visitante: bandera ... nombre
+        contenido = f"{bandera}&nbsp;{nombre}"
+    return (
+        f"<div style='text-align:{align};line-height:2.1;white-space:nowrap;"
+        f"overflow:hidden;text-overflow:ellipsis'>{contenido}</div>"
+    )
+
+
+def _fila_partido(par, mis, visibles):
+    """Una fila de partido dentro de la tarjeta de grupo."""
+    lc, mc, vc = st.columns([5, 2, 5], vertical_alignment="center")
+    lc.markdown(_equipo_html(par["local"], "right"), unsafe_allow_html=True)
+    vc.markdown(_equipo_html(par["visitante"], "left"), unsafe_allow_html=True)
+
+    pid = par["id"]
+    pron = mis.get(pid)
+    jugado = par["goles_local"] is not None
+    with mc:
+        if not cerrado(par):
+            # Editable: el usuario carga su pronóstico
+            default = f"{pron[0]}-{pron[1]}" if pron else ""
+            st.text_input(
+                "marcador", value=default, key=f"m_{pid}",
+                placeholder="0-0", label_visibility="collapsed",
+            )
+            st.markdown(
+                f"<div style='text-align:center;color:#9aa;font-size:.72rem;white-space:nowrap'>{fmt_hora(par['inicio'])}</div>",
+                unsafe_allow_html=True,
+            )
+            visibles.append(pid)
+        else:
+            # Cerrado: muestro resultado real (si hay) y el pronóstico del usuario
+            centro = resultado_txt(par) if jugado else (f"{pron[0]}-{pron[1]}" if pron else "🔒")
+            st.markdown(
+                f"<div style='text-align:center;font-weight:700;font-size:1.05rem'>{centro}</div>",
+                unsafe_allow_html=True,
+            )
+            if jugado:
+                if pron:
+                    pts = db.puntos_pronostico(pron[0], pron[1], par["goles_local"], par["goles_visitante"])
+                    color = {3: "#27c46b", 1: "#e0b528", 0: "#c0392b"}.get(pts, "#9aa")
+                    detalle = f"tuyo {pron[0]}-{pron[1]} · <b style='color:{color}'>+{pts}</b>"
+                else:
+                    detalle = "sin pronóstico"
+            else:
+                detalle = fmt_hora(par["inicio"])
+            st.markdown(
+                f"<div style='text-align:center;color:#9aa;font-size:.72rem;white-space:nowrap'>{detalle}</div>",
+                unsafe_allow_html=True,
+            )
+
+
 def vista_pronosticos(user):
-    st.subheader("📝 Mis pronósticos")
+    st.subheader("📝 Pronósticos")
     partidos = db.listar_partidos()
     if not partidos:
-        st.info("Todavía no hay partidos cargados.")
+        st.info("Todavía no hay partidos cargados. (Admin → Sincronizar con la API)")
         return
 
     mis = db.pronosticos_de(user["id"])
 
-    for par in partidos:
-        cierra = cerrado(par)
-        pgl, pgv = mis.get(par["id"], (0, 0))
-        etiqueta = f'{par["local"]} vs {par["visitante"]}  ·  {par["fase"]}  ·  {fmt_dt(par["inicio"])}'
-        with st.container(border=True):
-            st.markdown(f"**{etiqueta}**")
-            if par["goles_local"] is not None:
-                st.caption(f'Resultado final: {resultado_txt(par)}')
-            if cierra:
-                if par["id"] in mis:
-                    st.caption(f"🔒 Cerrado · tu pronóstico: {pgl} - {pgv}")
-                else:
-                    st.caption("🔒 Cerrado · sin pronóstico")
-            else:
-                c1, c2, c3 = st.columns([2, 2, 1])
-                ngl = c1.number_input(par["local"], 0, 20, pgl, key=f"gl_{par['id']}")
-                ngv = c2.number_input(par["visitante"], 0, 20, pgv, key=f"gv_{par['id']}")
-                if c3.button("Guardar", key=f"save_{par['id']}"):
-                    db.guardar_pronostico(user["id"], par["id"], int(ngl), int(ngv))
-                    st.toast("Guardado ✔")
-                    st.rerun()
+    # --- selector de día ---
+    dias = sorted({p["inicio"][:10] for p in partidos})
+    opciones = ["Todos"] + dias
+    sel = st.radio(
+        "Día", opciones, horizontal=True, label_visibility="collapsed",
+        format_func=lambda d: "Todos" if d == "Todos" else fmt_dia(d),
+    )
+    mostrados = partidos if sel == "Todos" else [p for p in partidos if p["inicio"][:10] == sel]
+
+    # --- agrupar por fase (Grupo A, ..., eliminatorias) ---
+    grupos = {}
+    for p in mostrados:
+        grupos.setdefault(p["fase"], []).append(p)
+    claves = sorted(grupos.keys(), key=orden_fase)
+
+    st.caption("Cargá tu marcador en formato **2-1** y guardá al final. 🟢 +3 exacto · 🟡 +1 ganador.")
+
+    visibles = []
+    with st.form("form_prono"):
+        for inicio in range(0, len(claves), 3):       # 3 grupos por fila
+            cols = st.columns(3)
+            for j, gkey in enumerate(claves[inicio:inicio + 3]):
+                with cols[j]:
+                    with st.container(border=True):
+                        st.markdown(f"#### {gkey}")
+                        for par in sorted(grupos[gkey], key=lambda p: p["inicio"]):
+                            _fila_partido(par, mis, visibles)
+        guardar = st.form_submit_button("💾 Guardar mis pronósticos", type="primary")
+
+    if guardar:
+        n = 0
+        for pid in visibles:
+            m = parse_marcador(st.session_state.get(f"m_{pid}", ""))
+            if m is None:
+                continue
+            actual = mis.get(pid)
+            if actual != m:
+                db.guardar_pronostico(user["id"], pid, m[0], m[1])
+                n += 1
+        st.success(f"Guardado ✔ ({n} pronóstico/s actualizados)")
+        st.rerun()
 
 
 def vista_tabla():
