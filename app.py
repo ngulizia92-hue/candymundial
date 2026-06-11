@@ -560,6 +560,31 @@ def vista_admin(user):
                 "`python telegram_backup.py` (ver README)."
             )
 
+    with st.expander("✍️ Cargar / editar resultados a mano", expanded=True):
+        st.caption(
+            "La API gratuita marca los partidos como terminados pero **no trae el marcador**. "
+            "Cargá vos el resultado acá: el sync automático no lo pisa."
+        )
+        _partidos = db.listar_partidos()
+        if _partidos:
+            def _etiq(p):
+                base = f"{fmt_dia(p['inicio'][:10])} {fmt_hora(p['inicio'])} · {p['local']} vs {p['visitante']}"
+                if p["goles_local"] is not None:
+                    base += f"  ✔ {p['goles_local']}-{p['goles_visitante']}"
+                return base
+
+            opciones = {_etiq(p): p for p in _partidos}
+            selp = st.selectbox("Partido", list(opciones.keys()))
+            p = opciones[selp]
+            with st.form("res_manual"):
+                rc1, rc2 = st.columns(2)
+                rgl = rc1.number_input(p["local"], 0, 30, p["goles_local"] or 0)
+                rgv = rc2.number_input(p["visitante"], 0, 30, p["goles_visitante"] or 0)
+                if st.form_submit_button("Guardar resultado", type="primary"):
+                    db.cargar_resultado(p["id"], int(rgl), int(rgv))
+                    st.success(f"Resultado guardado: {p['local']} {int(rgl)}-{int(rgv)} {p['visitante']} ✔")
+                    st.rerun()
+
 
 # ---------------- main ----------------
 restaurar_sesion()
