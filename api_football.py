@@ -68,6 +68,24 @@ def _inicio_art(utc_iso):
     return dt.astimezone(ART).replace(tzinfo=None).isoformat()
 
 
+def _resultado(score):
+    """Marcador que cuenta el prode: 90 min + alargue, SIN penales.
+
+    - Partidos regulares (grupos): la API solo trae 'fullTime' (regularTime viene
+      vacío) → se usa fullTime, que es el marcador de los 90 minutos.
+    - Partidos con alargue/penales: se usa regularTime + extraTime, así NO se
+      suman los penales (fullTime sí los sumaría).
+    """
+    reg = score.get("regularTime") or {}
+    if reg.get("home") is not None:
+        ext = score.get("extraTime") or {}
+        gl = reg.get("home", 0) + (ext.get("home") or 0)
+        gv = reg.get("away", 0) + (ext.get("away") or 0)
+        return gl, gv
+    ft = score.get("fullTime") or {}
+    return ft.get("home"), ft.get("away")
+
+
 def obtener_partidos():
     """Devuelve lista de dicts: api_id, fase, local, visitante, inicio (ART),
     gl, gv (None si no finalizó). Lanza excepción si falla la API/token."""
@@ -82,7 +100,7 @@ def obtener_partidos():
     out = []
     for m in data.get("matches", []):
         finalizado = m.get("status") == "FINISHED"
-        ft = (m.get("score") or {}).get("fullTime") or {}
+        gl, gv = _resultado(m.get("score") or {}) if finalizado else (None, None)
         out.append(
             {
                 "api_id": m["id"],
@@ -90,8 +108,8 @@ def obtener_partidos():
                 "local": _es(m["homeTeam"].get("name")),
                 "visitante": _es(m["awayTeam"].get("name")),
                 "inicio": _inicio_art(m["utcDate"]),
-                "gl": ft.get("home") if finalizado else None,
-                "gv": ft.get("away") if finalizado else None,
+                "gl": gl,
+                "gv": gv,
             }
         )
     return out
