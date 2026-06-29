@@ -69,19 +69,15 @@ def _inicio_art(utc_iso):
 
 
 def _resultado(score):
-    """Marcador que cuenta el prode: 90 min + alargue, SIN penales.
+    """Marcador que cuenta el prode: SOLO los 90 minutos (sin alargue ni penales).
 
-    - Partidos regulares (grupos): la API solo trae 'fullTime' (regularTime viene
-      vacío) → se usa fullTime, que es el marcador de los 90 minutos.
-    - Partidos con alargue/penales: se usa regularTime + extraTime, así NO se
-      suman los penales (fullTime sí los sumaría).
+    - Partidos con alargue/penales: se usa 'regularTime' (marcador a los 90').
+    - Partidos regulares (grupos): la API trae 'regularTime' vacío y el marcador
+      de los 90' está en 'fullTime' → se usa fullTime.
     """
     reg = score.get("regularTime") or {}
     if reg.get("home") is not None:
-        ext = score.get("extraTime") or {}
-        gl = reg.get("home", 0) + (ext.get("home") or 0)
-        gv = reg.get("away", 0) + (ext.get("away") or 0)
-        return gl, gv
+        return reg.get("home"), reg.get("away")
     ft = score.get("fullTime") or {}
     return ft.get("home"), ft.get("away")
 
